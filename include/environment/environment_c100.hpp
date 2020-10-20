@@ -10,7 +10,8 @@
 #include <common/SimpleMLPLayer.hpp>
 #include <common/math.hpp>
 #include <common/RandomNumberGenerator.hpp>
-#include "IK.hpp"
+#include <common/message_macros.hpp>
+#include "IK_c100.hpp"
 
 // simulator
 #include "raisim/World.hpp"
@@ -21,6 +22,7 @@
 #include "visualizer/visSetupCallback.hpp"
 #include "visualizer/raisimKeyboardCallback.hpp"
 #include "visualizer/guiState.hpp"
+
 namespace Env {
 enum TerrainType {
   Flat_,
@@ -30,7 +32,6 @@ enum TerrainType {
   SingleStep,
   UniformSlope
 };
-
 
 enum ActionType {
   EE = 0,
@@ -53,7 +54,7 @@ constexpr int StateDim = 133;
 constexpr int PrivilegedStateDim = StateDim + sampleN + 4 + 12 + 12 + 4 + 8 + 3; //
 constexpr int JointHistoryLength = 128;
 
-class Chimera_blind {
+class blind_locomotion {
  public:
 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -68,12 +69,12 @@ class Chimera_blind {
   typedef Eigen::Matrix<float, ActionDim, 1> Action;
   typedef Eigen::Matrix<float, ObservationDim, 1> Observation;
 
-  Chimera_blind() = delete;
+  blind_locomotion() = delete;
 
-  explicit Chimera_blind(bool visualize = false,
-                         int instance = 0,
-                         std::string urdf_path = "",
-                         std::string actuator_path = "") :
+  explicit blind_locomotion(bool visualize = false,
+                            int instance = 0,
+                            std::string urdf_path = "",
+                            std::string actuator_path = "") :
       vis_on_(visualize),
       vis_ready_(false),
       vid_on_(false),
@@ -185,12 +186,9 @@ class Chimera_blind {
 
 
     /// action params
-      actionScale_ <<
-                  Eigen::VectorXf::Constant(4, 0.5 * freqScale_),
-          Eigen::Matrix<float, -1, 1>::Constant(2, scale1), scale2,
-          Eigen::Matrix<float, -1, 1>::Constant(2, scale1), scale2,
-          Eigen::Matrix<float, -1, 1>::Constant(2, scale1), scale2,
-          Eigen::Matrix<float, -1, 1>::Constant(2, scale1), scale2;
+    actionScale_ <<
+                 Eigen::VectorXf::Constant(4, 0.5 * freqScale_),
+        Eigen::VectorXf::Constant(12, 0.2);
 
     actionOffset_ << Eigen::VectorXf::Constant(16, 0.0);
 
@@ -204,7 +202,6 @@ class Chimera_blind {
     env_ = new raisim::World;
 
     if (vis_on_) {
-      WARN("[task] Visualization enabled, instance: " << instance_)
       auto vis = raisim::OgreVis::get();
       vis->setWorld(env_);
       vis->setWindowSize(650, 800);
@@ -317,7 +314,7 @@ class Chimera_blind {
     COMPosition_ = anymal_->getLinkCOM()[0].e();
   }
 
-  ~Chimera_blind() {
+  ~blind_locomotion() {
     if (vis_on_) {
       raisim::OgreVis::get()->closeApp();
     }
@@ -500,7 +497,6 @@ class Chimera_blind {
 
     observation_scaled = (observation_unscaled - observationOffset_).cwiseProduct(observationScale_);
 
-    FATAL_IF(isnan(observation_unscaled.norm()), "??" << command_)
     Eigen::Matrix<float, -1, -1> temp = historyBuffer_;
     historyBuffer_.block(0, 1, ObservationDim, JointHistoryLength - 1) =
         temp.block(0, 0, ObservationDim, JointHistoryLength - 1);
@@ -536,18 +532,18 @@ class Chimera_blind {
       jointPosHist_.head(JointHistoryLength * 12 - 12) = temp;
       jointPosHist_.tail(12) = (jointPositionTarget_ - q_.tail(12)).template cast<float>();
 
-        Eigen::Matrix<double, 6, 1> seaInput;
-        Eigen::Matrix<double, 8, 1> seaInput2;
+      Eigen::Matrix<double, 6, 1> seaInput;
+      Eigen::Matrix<double, 8, 1> seaInput2;
 
-        for (int actId = 0; actId < 12; actId++) {
-          seaInput[0] = (jointVelHist_(actId + (JointHistoryLength - 9) * 12)) * 0.4;
-          seaInput[1] = (jointVelHist_(actId + (JointHistoryLength - 4) * 12)) * 0.4;
-          seaInput[2] = (jointVelHist_(actId + (JointHistoryLength - 1) * 12)) * 0.4;
-          seaInput[3] = (jointPosHist_(actId + (JointHistoryLength - 9) * 12)) * 3.0;
-          seaInput[4] = (jointPosHist_(actId + (JointHistoryLength - 4) * 12)) * 3.0;
-          seaInput[5] = (jointPosHist_(actId + (JointHistoryLength - 1) * 12)) * 3.0;
-          tau_(6 + actId) = actuator_A_.forward(seaInput)[0] * 20.0;
-        }
+      for (int actId = 0; actId < 12; actId++) {
+        seaInput[0] = (jointVelHist_(actId + (JointHistoryLength - 9) * 12)) * 0.4;
+        seaInput[1] = (jointVelHist_(actId + (JointHistoryLength - 4) * 12)) * 0.4;
+        seaInput[2] = (jointVelHist_(actId + (JointHistoryLength - 1) * 12)) * 0.4;
+        seaInput[3] = (jointPosHist_(actId + (JointHistoryLength - 9) * 12)) * 3.0;
+        seaInput[4] = (jointPosHist_(actId + (JointHistoryLength - 4) * 12)) * 3.0;
+        seaInput[5] = (jointPosHist_(actId + (JointHistoryLength - 1) * 12)) * 3.0;
+        tau_(6 + actId) = actuator_A_.forward(seaInput)[0] * 20.0;
+      }
 
       tau_.head(6).setZero();
       integrateOneTimeStep();
@@ -562,7 +558,6 @@ class Chimera_blind {
     }
     updateVisual();
   }
-
 
   void setActionType(ActionType in) {
     actionType_ = in;
@@ -708,7 +703,6 @@ class Chimera_blind {
         }
       }
 
-
       if (raisim::gui::reinit) {
         init();
         raisim::gui::reinit = false;
@@ -745,7 +739,6 @@ class Chimera_blind {
 
   void updateAction(const Action &action_t) {
     if (isnan(action_t.norm()) || isinf(action_t.norm())) {
-      WARN("badAction")
       badlyConditioned_ = true;
     }
 
@@ -1390,7 +1383,6 @@ class Chimera_blind {
 
     if (isnan(state.norm()) || isinf(state.norm())) {
       badlyConditioned_ = true;
-      WARN("badState" << state.transpose());
     }
   }
 
@@ -1508,10 +1500,6 @@ class Chimera_blind {
                                 disturbance_);
 
     }
-    WARN_IF(isnan(u_.norm()), "error in simulation!!" << std::endl
-                                                      << "action" << scaledAction_.transpose() << std::endl
-                                                      << "q_" << q_.transpose() << std::endl
-                                                      << "u_" << u_.transpose() << std::endl);
 
     visDecimation_ = size_t(1. / (30.0 * 0.0025)) * realTimeRatio_;
 
@@ -1600,7 +1588,6 @@ class Chimera_blind {
     return i;
   }
 
-
 /**
       current state =
        *      [command (horizontal velocity, yawrate)                      n =  3, si =   0
@@ -1618,7 +1605,6 @@ class Chimera_blind {
   inline void conversion_GeneralizedState2LearningState(State &state,
                                                         const Eigen::Matrix<double, -1, 1> &q,
                                                         const Eigen::Matrix<double, -1, 1> &u) {
-
 
     Eigen::Matrix<double, 4, 1> quat = q_.segment<4>(3);
     R_b_ = Math::MathFunc::quatToRotMat(quat);
@@ -1678,15 +1664,21 @@ class Chimera_blind {
         jointVelHist_.template segment<12>((JointHistoryLength - 9) * 12);
     pos += 12;
 
-    for (size_t i = 0; i < 4; i++) {
-      state_unscaled.template segment<3>(pos) = footPos_Target[i].template cast<Dtype>();
-      pos += 3;
-    }
+//    for (size_t i = 0; i < 4; i++) {
+//      state_unscaled.template segment<3>(pos) = footPos_Target[i].template cast<float>();
+//      pos += 3;
+//    }
+//
+//    for (size_t i = 0; i < 4; i++) {
+//      state_unscaled.template segment<3>(pos) = prevfootPos_Target[i].template cast<float>();
+//      pos += 3;
+//    }
+    state_unscaled.template segment<12>(pos) = jointPositionTarget_.template cast<float>();
+    pos += 12;
 
-    for (size_t i = 0; i < 4; i++) {
-      state_unscaled.template segment<3>(pos) = prevfootPos_Target[i].template cast<Dtype>();
-      pos += 3;
-    }
+    state_unscaled.template segment<12>(pos) = previousjointPositionTarget_.template cast<float>();
+    pos += 12;
+
 
     state_unscaled[pos] = baseFreq_;
     pos++;

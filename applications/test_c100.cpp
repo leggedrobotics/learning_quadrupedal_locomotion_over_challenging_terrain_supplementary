@@ -9,10 +9,19 @@ constexpr int history_len = 100; // todo: move to controller config.
 
 int main(int argc, char *argv[]) {
 
-  std::string urdf_path = "/home/joonho/oldws/blind_sandbox/rsc/robot/chimera/urdf/anymal_minimal.urdf";
-  std::string actuator_path = "/home/joonho/oldws/blind_sandbox/rsc/actuator/C100/seaModel_2500.txt";
-  std::string network_path = "/home/joonho/oldws/blind_sandbox/rsc/controller/graph.pb";
-  std::string param_path = "/home/joonho/oldws/blind_sandbox/rsc/controller/param.txt";
+  ///Hard-coded. TODO: clean it up
+  std::string rsc_path = "/home/jolee/raisimws/learning_locomotion_over_challenging_terrain_supplementary/rsc";
+
+//  /home/jolee/raisimws/learning_locomotion_over_challening_terrain_supplementary/rsc/robot/c100/urdf/anymal_minimal.urdf
+
+  std::string urdf_path = rsc_path + "/robot/c100/urdf/anymal_minimal.urdf";
+  std::string actuator_path = rsc_path + "/actuator/C100/seaModel_2500.txt";
+  std::string network_path = rsc_path + "/controller/graph.pb";
+  std::string param_path = rsc_path + "/controller/param.txt";
+
+  std::cout << urdf_path << std::endl;
+
+  raisim::World::setActivationKey("/home/jolee/raisimws/install/activation.raisim");
 
   Env::blind_locomotion sim(true, 0, urdf_path, actuator_path);
   Policy<Env::ActionDim> policy(network_path,
