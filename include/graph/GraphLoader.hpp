@@ -41,7 +41,7 @@ class GraphLoader {
               bool logDevicePlacment = false) {
     auto status = tensorflow::ReadBinaryProto(tensorflow::Env::Default(), pathToGraphDefProtobuf, &graphDef_);
     if (!status.ok()) {
-      std::cout << status.ToString() << std::endl;
+      FATAL(status.ToString());
     }
     construct(graphDef_, n_threads, logDevicePlacment);
   }
@@ -54,7 +54,7 @@ class GraphLoader {
               bool logDevicePlacment = false) {
     auto status = tensorflow::ReadBinaryProto(tensorflow::Env::Default(), pathToGraphDefProtobuf, &graphDef_);
     if (!status.ok()) {
-      std::cout << status.ToString() << std::endl;
+      FATAL(status.ToString());
     }
     construct(graphDef_, n_threads, logDevicePlacment);
   }

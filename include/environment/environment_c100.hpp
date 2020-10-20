@@ -607,6 +607,10 @@ class blind_locomotion {
           foot0->setMaterialName("black");
           foot1->setMaterialName("black");
         }
+        if(footFriction_[i] < 0.5){
+          foot0->setMaterialName("green");
+          foot1->setMaterialName("green");
+        }
       }
 
       /// info
@@ -738,6 +742,7 @@ class blind_locomotion {
   }
 
   void updateAction(const Action &action_t) {
+
     if (isnan(action_t.norm()) || isinf(action_t.norm())) {
       badlyConditioned_ = true;
     }
@@ -752,6 +757,7 @@ class blind_locomotion {
     for (size_t i = 0; i < 4; i++) {
       piD_[i] = scaledAction_[i] + baseFreq_;
     }
+
 
     /// update Target
     yHorizontal_ << 0.0, e_g_noisy_[2], -e_g_noisy_[1]; // e_g cross 1,0,0
@@ -788,13 +794,17 @@ class blind_locomotion {
       footPos_Target[j][2] = 0.0;
 
       footPos_Target[j] += e_g_noisy_ * (footPositionOffset_.tail(12)[3 * j + 2] + dh);
-      footPos_Target[j] += e_g_noisy_ * scaledAction_.tail(12)[3 * j + 2];
-      footPos_Target[j] += xHorizontal_ * scaledAction_.tail(12)[3 * j];
-      footPos_Target[j] += yHorizontal_ * scaledAction_.tail(12)[3 * j + 1];
+
+      IK_.IKSagittal(sol, footPos_Target[j], j);
+      jointPositionTarget_.segment<3>(3 * j) = sol;
+      jointPositionTarget_(3 * j) += scaledAction_.tail(12)[3 * j];
+      jointPositionTarget_(3 * j + 1) += scaledAction_.tail(12)[3 * j + 1];
+      jointPositionTarget_(3 * j + 2) += scaledAction_.tail(12)[3 * j + 2];;
     }
 
     t_ = 0.0;
   }
+
 
   void addBaseMass(double in) {
     anymal_->getMass()[0] = defaultBodyMasses_[0] + in;
@@ -1386,15 +1396,15 @@ class blind_locomotion {
     }
   }
 
-  void getPriviligedState(Eigen::Matrix<float, -1, 1> &state) {
+  void getPriviligedState(Eigen::Matrix<float, -1, -1> &state) {
     updateCommand();
 
     State temp;
-    state.resize(PrivilegedStateDim);
+    state.resize(PrivilegedStateDim, 1);
     state.setZero();
 
     conversion_GeneralizedState2LearningState(temp, q_, u_);
-    state.head(StateDim) = temp;
+    state.col(0).head(StateDim) = temp;
 
 //return;
     int pos = StateDim;
@@ -1404,52 +1414,52 @@ class blind_locomotion {
 
     for (size_t i = 0; i < 4; i++) {
       for (size_t j = 0; j < num; j++) {
-        state[pos + pos2] = footPos_W[i][2] - FHs_.data()[pos2];
-        state[pos + pos2] = std::max(std::min(state[pos + pos2], 0.25f), -0.25f);
-        state[pos + pos2] -= 0.05;
-        state[pos + pos2] *= 10.0;
+        state(pos+pos2, 0) = footPos_W[i][2] - FHs_.data()[pos2];
+        state(pos+pos2, 0) = std::max(std::min(state(pos+pos2, 0), 0.25f), -0.25f);
+        state(pos+pos2, 0) -= 0.05;
+        state(pos+pos2, 0) *= 10.0;
         pos2++;
       }
     }
 
     pos += sampleN;
     for (size_t i = 0; i < 4; i++) {
-      state[pos + i] = (footContactState_[i] - 0.5) * 3.0;
+      state(pos+i, 0)= (footContactState_[i] - 0.5) * 3.0;
     }
     pos += 4;
 
     for (size_t i = 0; i < 4; i++) {
       int start_idx = 3 * i + pos;
-      state.template segment<3>(start_idx) = netFootContacts_b[i].template cast<float>();
-      state[start_idx + 2] -= 80.0;
-      state[start_idx] = std::max(std::min(state[start_idx], 50.0f), -50.0f);
-      state[start_idx + 1] = std::max(std::min(state[start_idx + 1], 50.0f), -50.0f);
-      state[start_idx + 2] = std::max(std::min(state[start_idx + 2], 100.0f), -100.0f);
-      state[start_idx] *= 0.01;
-      state[start_idx + 1] *= 0.01;
-      state[start_idx + 2] *= 0.02;
+      state.col(0).template segment<3>(start_idx) = netFootContacts_b[i].template cast<float>();
+      state(start_idx + 2, 0) -= 80.0;
+      state(start_idx, 0) = std::max(std::min(state(start_idx,0), 50.0f), -50.0f);
+      state(start_idx + 1, 0) = std::max(std::min(state(start_idx + 1,0), 50.0f), -50.0f);
+      state(start_idx + 2, 0) = std::max(std::min(state(start_idx + 2,0), 100.0f), -100.0f);
+      state(start_idx, 0) *= 0.01;
+      state(start_idx + 1, 0) *= 0.01;
+      state(start_idx + 2, 0) *= 0.02;
     }
     pos += 12;
 
     for (size_t i = 0; i < 4; i++) {
       int start_idx = 3 * i + pos;
-      state.template segment<3>(start_idx) = footNormal_b[i].template cast<float>();
-      state[start_idx] *= 5.0;
-      state[start_idx + 1] *= 5.0;
-      state[start_idx + 2] -= 1.0;
-      state[start_idx + 2] *= 20.0;
+      state.col(0).template segment<3>(start_idx) = footNormal_b[i].template cast<float>();
+      state(start_idx,0) *= 5.0;
+      state(start_idx + 1,0) *= 5.0;
+      state(start_idx + 2,0) -= 1.0;
+      state(start_idx + 2,0) *= 20.0;
     }
     pos += 12;
 
     for (size_t i = 0; i < 4; i++) {
-      state[pos + i] = (footFriction_[i] - 0.6) * 2.0;
+      state(pos+i, 0)= (footFriction_[i] - 0.6) * 2.0;
     }
     pos += 4;
 
     for (size_t i = 0; i < 4; i++) {
-      state[pos] = (thighContacts_[i] - 0.5) * 2.0;
+      state(pos,0) = (thighContacts_[i] - 0.5) * 2.0;
       pos++;
-      state[pos] = (shankContacts_[i] - 0.5) * 2.0;
+      state(pos,0) = (shankContacts_[i] - 0.5) * 2.0;
       pos++;
     }
 
@@ -1457,9 +1467,9 @@ class blind_locomotion {
     disturbance_in_base = R_b_.transpose() * disturbance_.e();
     disturbance_in_base *= 0.1;
 
-    state[pos++] = disturbance_in_base[0];
-    state[pos++] = disturbance_in_base[1];
-    state[pos++] = disturbance_in_base[2];
+    state(pos++,0) = disturbance_in_base[0];
+    state(pos++,0) = disturbance_in_base[1];
+    state(pos++,0) = disturbance_in_base[2];
   }
 
   Eigen::VectorXd getGeneralizedState() { return q_; }
@@ -1699,7 +1709,6 @@ class blind_locomotion {
   double piD_[4];
   double clearance_[4];
   double h0_ = -0.55;
-  double costMax_;
   Eigen::VectorXd uPrev_;
   Eigen::VectorXd acc_;
   int steps_ = 0;
