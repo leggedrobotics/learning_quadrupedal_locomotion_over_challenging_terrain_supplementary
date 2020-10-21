@@ -18,9 +18,13 @@
 * raisimOgre (https://github.com/raisimTech/raisimOgre)
 * tensorflow-cpp (https://github.com/leggedrobotics/tensorflow-cpp)
 
+#### Third-party
+* anymal_c_simple_description(https://github.com/ANYbotics/anymal_c_simple_description)
+
 #### Notes
 * Some paths are hard-coded in _test_c010.cpp_ and _test_c100.cpp_. Be caureful about them.
-* This repository is not maintained anymore. If you have a question, send an email to jolee@ethz.ch. 
+* This repository is not maintained anymore. If you have a question, send an email to jolee@ethz.ch.
+* For the codes in rsc/robot/, ANYbotics' license is applied. MIT license otherwise. 
 * You can install tensorflow-cpp locally as follows.
 ```sh
 cd tensorflow/tensorflow
