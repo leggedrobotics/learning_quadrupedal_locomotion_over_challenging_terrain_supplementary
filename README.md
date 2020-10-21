@@ -1,9 +1,9 @@
 # Supplementary materials for "Learning Quadrupedal Locomotion over Challenging Terrain"
-###Project page: https://leggedrobotics.github.io/rl-blindloco
-###Author: Joonho Lee (jolee@ethz.ch)
+### Project page: https://leggedrobotics.github.io/rl-blindloco
+### Author: Joonho Lee (jolee@ethz.ch)
 
 
-####This repo contains
+#### This repo contains
 * __trained policy networks for ANYmal c010 and c100 models.__
     * c010 model is not trained with _Slippery Hills_ terrain.
     * c100 is the latest model (added during the revision)
@@ -13,12 +13,12 @@
     * In the visualizer, press space key to re-initialize the robot
 
     
-####Dependencies
+#### Dependencies
 * raisim (https://github.com/raisimTech/raisimlib)
 * raisimOgre (https://github.com/raisimTech/raisimOgre)
 * tensorflow-cpp (https://github.com/leggedrobotics/tensorflow-cpp)
 
-####Notes
+#### Notes
 * Some paths are hard-coded in _test_c010.cpp_ and _test_c100.cpp_. Be caureful about them.
 * This repository is not maintained anymore. If you have a question, send an email to jolee@ethz.ch. 
 * You can install tensorflow-cpp locally as follows.
