@@ -25,6 +25,11 @@
 * Some paths are hard-coded in _test_c010.cpp_ and _test_c100.cpp_. Be caureful about them.
 * This repository is not maintained anymore. If you have a question, send an email to jolee@ethz.ch.
 * For the codes in rsc/robot/, ANYbotics' license is applied. MIT license otherwise. 
+* Install the dependencies in you local build directory and link as follows.
+```
+cmake -DCMAKE_INSTALL_PREFIX=${YOUR_LOCAL_BUILD_DIRECTORY} -DCMAKE_BUILD_TYPE=Release ..
+```
+
 * You can install tensorflow-cpp locally as follows.
 ```sh
 cd tensorflow/tensorflow
