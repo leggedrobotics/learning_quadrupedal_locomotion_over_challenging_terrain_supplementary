@@ -24,6 +24,7 @@
 #### Notes
 * Some paths are hard-coded in _test_c010.cpp_ and _test_c100.cpp_. Be caureful about them.
 * This repository is not maintained anymore. If you have a question, send an email to jolee@ethz.ch.
+* We don't take questions regarding installation. If you install the dependencies successfully, you can easily run this.
 * For the codes in rsc/robot/, ANYbotics' license is applied. MIT license otherwise. 
 * Install the dependencies in you local build directory and link as follows.
 ```
